@@ -42,10 +42,12 @@ push a s = NonEmpty a s
 -- Get number of elements in stack
 -- TODO: implement size
 size :: Num n => Stack a -> n
-size = undefined
+size (NonEmpty _ s) = 1 + size s
+size _ = 0
 
 -- Check if stack is empty
 -- Note: is more effective than checking if size is zero
 -- TODO: implement null (not by using size!)
 null :: Stack a -> Bool
-null = undefined
+null Empty = True
+null _ = False
