@@ -25,12 +25,14 @@ topSafe _ = Nothing
 -- If stack is empty error with message "Empty stack" will be raised
 -- TODO: implement pop
 pop :: Stack a -> Stack a
-pop = undefined
+pop (NonEmpty _ s) = s
+pop _ = error "Empty stack"
 
 -- Pop element from top of stack (if there is some, otherwise return Nothing)
 -- TODO: implement safe pop
 popSafe :: Stack a -> Maybe (Stack a)
-popSafe = undefined
+popSafe (NonEmpty _ s) = Just s
+popSafe _ = Nothing
 
 -- Push element to top of stack
 -- TODO: implement push
