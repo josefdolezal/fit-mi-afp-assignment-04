@@ -37,7 +37,7 @@ popSafe _ = Nothing
 -- Push element to top of stack
 -- TODO: implement push
 push :: a -> Stack a -> Stack a
-push = undefined
+push a s = NonEmpty a s
 
 -- Get number of elements in stack
 -- TODO: implement size
