@@ -11,12 +11,15 @@ empty = Empty
 -- If stack is empty error with message "Empty stack" will be raised
 -- TODO: implement top
 top :: Stack a -> a
-top = undefined
+top (NonEmpty a _) = a
+top _ = error "Empty stack"
 
 -- Get element from top of stack (if there is some, otherwise return Nothing)
 -- TODO: implement safe top
 topSafe :: Stack a -> Maybe a
-topSafe = undefined
+topSafe (NonEmpty a _) = Just a
+topSafe _ = Nothing
+
 
 -- Pop element from top of stack
 -- If stack is empty error with message "Empty stack" will be raised
