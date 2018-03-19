@@ -1,5 +1,7 @@
 module Lists where
 
+import qualified Data.List as List
+
 -- TODO: create infinite list of pythagorean triples = (x,y,z), where x^2 + y^2 = z^2
 -- TODO: use list comprehension!
 -- https://en.wikipedia.org/wiki/Pythagorean_triple
@@ -28,4 +30,7 @@ kroneckerDelta x y
 -- Note: sublists are rows
 -- if wrong sizes, raise error "Incorrect matrix sizes"
 matrixMultiplication :: Num a => [[a]] -> [[a]] -> [[a]]
-matrixMultiplication x y = undefined
+matrixMultiplication x y 
+    | length (List.transpose x) == length y = [[reduce a b | b <- List.transpose y] | a <- x]
+    | otherwise = error "Incorrect matrix sizes"
+        where reduce x y = sum $ zipWith (*) x y
