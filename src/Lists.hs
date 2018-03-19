@@ -13,7 +13,14 @@ pythagoreanTriples = [(a, b, c) | c <- [1..], b <- [1..c-1], a <- [1..b-1], vali
 -- https://en.wikipedia.org/wiki/Identity_matrix
 -- Note: sublists are rows
 eyeMatrix :: Num a => Int -> [[a]]
-eyeMatrix n = undefined
+eyeMatrix 0 = [[]]
+eyeMatrix n = [row y n | y <- [1..n]]
+    where row i n = [kroneckerDelta i x | x <- [1..n]]
+
+kroneckerDelta :: (Eq a, Num p) => a -> a -> p
+kroneckerDelta x y
+    | x == y = 1
+    | otherwise = 0
 
 -- TODO: multiply matrices x and y
 -- TODO: use list comprehension!
