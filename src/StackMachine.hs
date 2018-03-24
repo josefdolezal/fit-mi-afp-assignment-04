@@ -23,6 +23,33 @@ type ComputerStack = Stack.Stack (Either Address Value)
 -- | If there is a problem, error is raised ("Empty stack", "Not value", "Not address", "No input", "Unknown label", "Division by 0", "Uninitialized memory"), see tests
 -- TODO: implement running the program
 runProgram :: Program -> Input -> Output
-runProgram = undefined
+copyValueToMemory :: ComputerStack -> Memory -> Memory
+moveValueToMemory s m = 
+    where address = stackAddress $ Stack.pop s
+          value   = stackValue s
 
--- Feel free to create more helper functions
+replaceAddressByValue s m = Stack.push value $ Stack.pop s
+    where value = valueAtAddress (stackAddress s) m s
+
+stackValue :: ComputerStack -> Value
+stackValue s
+    | Stack.top s == (Right v) = v
+    | otherwise = error "Not value"
+
+stackAddress :: ComputerStack -> Address
+stackAddress s
+    | Stack.top s == (Left a) = a
+    | otherwise = error "Not address"
+
+valueAtAddress :: Address -> Memory -> ComputerStack -> Value
+valueAtAddress a m s
+    | Map.lookup (stackAddress s) m == (Just v) = v
+    | otherwise = "Not value"
+
+nextInputValue :: Input -> Value
+nextInputValue i
+    | value == (v :< _) = v
+    | otherwise = error "Not value"
+
+pop2 :: Stack.Stack a -> Stack.Stack a
+pop2 == Stack.pop . Stack.pop
