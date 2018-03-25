@@ -30,72 +30,113 @@ reducer EOP _ _ _ _ out = out
 reducer (i `Then` p) s inp mem sub out = case i of
     (TA a) -> reducer p (Stack.push (Left a) s) inp mem sub out
     (TV v) -> reducer p (Stack.push (Right v) s) inp mem sub out
-    DR     -> reducer p (replaceAddressByValue s mem) inp mem sub out
-    ST     -> reducer p (pop2 s) inp (copyValueToMemory s mem) sub out
-    WR     -> reducer p s inp mem sub (out Seq.|> stackValue s)
-    RD     -> reducer p (Stack.push (Right $ nextInputValue inp) s) (popInputValue inp) mem sub out
-    AD     -> reducer p (add2 s) inp mem sub out
-    SB     -> reducer p (substract2 s) inp mem sub out
-    MT     -> reducer p (multip2 s) inp mem sub out
-    DI     -> reducer p (div2 s) inp mem sub out
-    
+    DR     -> case (replaceAddressByValue s mem) of
+                (Left s') -> reducer p s' inp mem sub out
+                (Right e) -> error e
+    ST     -> case (copyValueToMemory s mem, pop2 s) of
+                (Left mem', Left s') -> reducer p s' inp mem' sub out
+                (Right e, _)          -> error e
+                (_, Right e)          -> error e
+    WR     -> case (stackValue s) of
+                (Left v)  -> reducer p (Stack.pop s) inp mem sub (out Seq.|> v)
+                (Right e) -> error e
+    RD     -> case (nextInputValue inp, popInputValue inp) of
+                ((Left v), (Left inp')) -> reducer p (Stack.push (Right v) s) inp' mem sub out
+                ((Right e), _)          -> error e
+                (_, (Right e))          -> error e
+    AD     -> case (add2 s) of
+                (Left s') -> reducer p s' inp mem sub out
+                (Right e) -> error e 
+    SB     -> case (substract2 s) of
+                (Left s') -> reducer p s' inp mem sub out
+                (Right e) -> error e
+    MT     -> case (multip2 s) of
+                (Left s') -> reducer p s' inp mem sub out
+                (Right e) -> error e
+    DI     -> case (div2 s) of
+                (Left s') -> reducer p s' inp mem sub out
+                (Right e) -> error e
 reducer _ _ _ _ _ _  = error "Jumping not supported yet"
 
-copyValueToMemory :: ComputerStack -> Memory -> Memory
-copyValueToMemory s mem = Map.insert address value mem
-    where address = stackAddress $ Stack.pop s
-          value   = stackValue s
+copyValueToMemory :: ComputerStack -> Memory -> (Either Memory String)
+copyValueToMemory s mem = case (stackAddress $ Stack.pop s, stackValue s) of
+    ((Left a), (Left v)) -> Left $ Map.insert a v mem
+    ((Right e), _)       -> Right e
+    (_, (Right e))       -> Right e
 
-replaceAddressByValue :: ComputerStack -> Memory -> ComputerStack
-replaceAddressByValue s m = Stack.push value $ Stack.pop s
-    where value = (Right $ valueAtAddress (stackAddress s) m s)
+replaceAddressByValue :: ComputerStack -> Memory -> (Either ComputerStack String)
+replaceAddressByValue s m = case (stackAddress s) of
+    (Left a)  -> case (valueAtAddress a m) of
+        (Left v)  -> Left (Stack.push (Right v) $ Stack.pop s)
+        (Right e) -> Right e
+    (Right e) -> Right e
 
-stackValue :: ComputerStack -> Value
+stackValue :: ComputerStack -> (Either Value String)
 stackValue s = case (Stack.top s) of
-    Right v -> v
-    _       -> error notValue
+    Right v -> Left v
+    _       -> Right notValue
 
-stackAddress :: ComputerStack -> Address
+stackAddress :: ComputerStack -> (Either Address String)
 stackAddress s = case (Stack.top s) of
-    Left a -> a
-    _      -> error notAddress
+    Left a -> (Left a)
+    _      -> (Right notAddress)
 
-valueAtAddress :: Address -> Memory -> ComputerStack -> Value
-valueAtAddress a m s = case (Map.lookup (stackAddress s) m) of
-    (Just v) -> v
-    _        -> error notValue
+valueAtAddress :: Address -> Memory -> (Either Value String)
+valueAtAddress a m =  case (Map.lookup a m) of
+    (Just v) -> (Left v)
+    _        -> (Right notValue)
 
-nextInputValue :: Input -> Value
+nextInputValue :: Input -> (Either Value String)
 nextInputValue i = case (Seq.viewl i) of
-    (v Seq.:< _) -> v
-    _            -> error notValue
+    (v Seq.:< _) -> (Left v)
+    _            -> (Right noInput)
 
-popInputValue :: Input -> Input
+popInputValue :: Input -> (Either Input String)
 popInputValue i = case (Seq.viewl i) of
-    (_ Seq.:< xs) -> xs
-    _             -> error notValue
+    (_ Seq.:< xs) -> (Left xs)
+    _             -> (Right noInput)
 
-pop2 :: Stack.Stack a -> Stack.Stack a
-pop2 = Stack.pop . Stack.pop
+pop2 :: Stack.Stack a -> (Either (Stack.Stack a) String)
+pop2 s = case (stackTop2 s) of
+    (Left (_, _, s)) -> Left s
+    (Right e)    -> Right e
 
-add2 :: ComputerStack -> ComputerStack
-add2 s = Stack.push (Right sum) $ pop2 s
-    where sum = (stackValue s) + (stackValue $ Stack.pop s)
+add2 :: ComputerStack -> (Either ComputerStack String)
+add2 s = case (stackTop2Values s) of
+    (Left (l, r, s')) -> Left $ Stack.push (Right $ l + r) s'
+    (Right e)         -> Right e
 
-substract2 :: ComputerStack -> ComputerStack
-substract2 s = Stack.push (Right remainder) $ pop2 s
-    where remainder = (stackValue s) - (stackValue $ Stack.pop s)
+substract2 :: ComputerStack -> (Either ComputerStack String)
+substract2 s = case (stackTop2Values s) of
+    (Left (l, r, s')) -> Left $ Stack.push (Right $ l - r) s'
+    (Right e)         -> Right e
 
-multip2 :: ComputerStack -> ComputerStack
-multip2 s = Stack.push (Right result) $ pop2 s
-    where result = (stackValue s) - (stackValue $ Stack.pop s)
+multip2 :: ComputerStack -> (Either ComputerStack String)
+multip2 s = case (stackTop2Values s) of
+    (Left (l, r, s')) -> Left $ Stack.push (Right $ l * r) s'
+    (Right e)         -> Right e
 
-div2 :: ComputerStack -> ComputerStack
-div2 s = Stack.push (Right result) $ pop2 s
-    where result = case (stackValue $ Stack.pop s) of
-            0 -> error divisionByZero
-            x -> (stackValue s) `div` x
+div2 :: ComputerStack -> (Either ComputerStack String)
+div2 s = case (stackTop2Values s) of
+    (Left (l, 0, s')) -> Right divisionByZero
+    (Left (l, r, s')) -> Left $ Stack.push (Right $ l `div` r) s'
+    (Right e)     -> Right e
 
+stackTop2 :: Stack.Stack a -> (Either (a, a, Stack.Stack a) String)
+stackTop2 s = case (Stack.topSafe s) of
+    (Just l) -> case (Stack.topSafe $ Stack.pop s) of
+                    (Just r) -> Left (l, r, Stack.pop . Stack.pop $ s)
+                    _        -> (Right emptyStack)
+    _        -> (Right emptyStack)
+
+stackTop2Values :: ComputerStack -> (Either (Value, Value, ComputerStack) String)
+stackTop2Values s = case (stackTop2 s ) of
+    (Left (Right l, Right r, s')) -> Left (l, r, s')
+    (Right e)                    -> Right e
+    _                            -> Right notValue
+
+emptyStack = "Empty stack"
 notValue = "Not value"
 notAddress = "Not address"
 divisionByZero = "Division by 0"
+noInput = "No input"
