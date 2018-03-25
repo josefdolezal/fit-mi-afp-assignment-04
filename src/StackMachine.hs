@@ -59,8 +59,8 @@ reducer (i `Then` p) s inp mem sub out = case i of
 reducer _ _ _ _ _ _  = error "Jumping not supported yet"
 
 copyValueToMemory :: ComputerStack -> Memory -> (Either Memory String)
-copyValueToMemory s mem = case (stackAddress $ Stack.pop s, stackValue s) of
-    ((Left a), (Left v)) -> Left $ Map.insert a v mem
+copyValueToMemory s mem = case (stackValue s, stackAddress $ Stack.pop s) of
+    ((Left v), (Left a)) -> Left $ Map.insert a v mem
     ((Right e), _)       -> Right e
     (_, (Right e))       -> Right e
 
@@ -84,7 +84,7 @@ stackAddress s = case (Stack.top s) of
 valueAtAddress :: Address -> Memory -> (Either Value String)
 valueAtAddress a m =  case (Map.lookup a m) of
     (Just v) -> (Left v)
-    _        -> (Right notValue)
+    _        -> (Right notAddress)
 
 nextInputValue :: Input -> (Either Value String)
 nextInputValue i = case (Seq.viewl i) of
