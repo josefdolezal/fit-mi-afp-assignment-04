@@ -18,10 +18,8 @@ type SubprogramDir = Map.Map Label Program
 -- | Computer stack can store addresses and values
 type ComputerStack = Stack.Stack (Either Address Value)
 
-
 -- | Run program with given input (memory and stack should be empty at start)
 -- | If there is a problem, error is raised ("Empty stack", "Not value", "Not address", "No input", "Unknown label", "Division by 0", "Uninitialized memory"), see tests
--- TODO: implement running the program
 runProgram :: Program -> Input -> Output
 runProgram p i = reducer p Stack.empty i Map.empty (scanLabels p Map.empty) Seq.empty
 
