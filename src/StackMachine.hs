@@ -23,10 +23,11 @@ type ComputerStack = Stack.Stack (Either Address Value)
 -- | If there is a problem, error is raised ("Empty stack", "Not value", "Not address", "No input", "Unknown label", "Division by 0", "Uninitialized memory"), see tests
 -- TODO: implement running the program
 runProgram :: Program -> Input -> Output
-runProgram p i = reducer p Stack.empty i Map.empty Map.empty Seq.empty
+runProgram p i = reducer p Stack.empty i Map.empty (scanLabels p Map.empty) Seq.empty
 
 reducer :: Program -> ComputerStack -> Input -> Memory -> SubprogramDir -> Output -> Output
 reducer EOP _ _ _ _ out = out
+reducer (l `Marks` p) s inp mem sub out = reducer p s inp mem (Map.insert l p sub) out
 reducer (i `Then` p) s inp mem sub out = case i of
     (TA a) -> reducer p (Stack.push (Left a) s) inp mem sub out
     (TV v) -> reducer p (Stack.push (Right v) s) inp mem sub out
@@ -56,7 +57,24 @@ reducer (i `Then` p) s inp mem sub out = case i of
     DI     -> case (div2 s) of
                 (Left s') -> reducer p s' inp mem sub out
                 (Right e) -> error e
-reducer _ _ _ _ _ _  = error "Jumping not supported yet"
+    (JU l) -> case (subprogram l sub) of
+                (Left p') -> reducer p' s inp mem sub out
+                (Right e) -> error e
+    (JZ l) -> case (stackValue s, subprogram l sub) of
+                (Left 0, Left p') -> reducer p' (Stack.pop s) inp mem sub out
+                (Left _, Left _)       -> reducer p (Stack.pop s) inp mem sub out
+                (Right e, _)      -> error e
+                (_, Right e)      -> error e
+
+subprogram :: Label -> Map.Map Label Program -> Either Program String
+subprogram l m = case (Map.lookup l m) of
+    (Just p) -> Left p
+    _        -> Right unknownLabel
+
+scanLabels :: Program -> Map.Map Label Program -> Map.Map Label Program
+scanLabels (l `Marks` p) m = scanLabels p $ Map.insert l p m
+scanLabels (_ `Then` p) m  = scanLabels p m
+scanLabels EOP m           = m
 
 copyValueToMemory :: ComputerStack -> Memory -> (Either Memory String)
 copyValueToMemory s mem = case (stackValue s, stackAddress $ Stack.pop s) of
@@ -141,3 +159,4 @@ notAddress = "Not address"
 divisionByZero = "Division by 0"
 noInput = "No input"
 uninitializedMemory = "Uninitialized memory"
+unknownLabel = "Unknown label"
