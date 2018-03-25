@@ -24,32 +24,36 @@ type ComputerStack = Stack.Stack (Either Address Value)
 -- TODO: implement running the program
 runProgram :: Program -> Input -> Output
 copyValueToMemory :: ComputerStack -> Memory -> Memory
-moveValueToMemory s m = 
+copyValueToMemory s mem = Map.insert address value mem
     where address = stackAddress $ Stack.pop s
           value   = stackValue s
 
+replaceAddressByValue :: ComputerStack -> Memory -> ComputerStack
 replaceAddressByValue s m = Stack.push value $ Stack.pop s
-    where value = valueAtAddress (stackAddress s) m s
+    where value = (Right $ valueAtAddress (stackAddress s) m s)
 
 stackValue :: ComputerStack -> Value
-stackValue s
-    | Stack.top s == (Right v) = v
-    | otherwise = error "Not value"
+stackValue s = case (Stack.top s) of
+    Right v -> v
+    _       -> error notValue
 
 stackAddress :: ComputerStack -> Address
-stackAddress s
-    | Stack.top s == (Left a) = a
-    | otherwise = error "Not address"
+stackAddress s = case (Stack.top s) of
+    Left a -> a
+    _      -> error notAddress
 
 valueAtAddress :: Address -> Memory -> ComputerStack -> Value
-valueAtAddress a m s
-    | Map.lookup (stackAddress s) m == (Just v) = v
-    | otherwise = "Not value"
+valueAtAddress a m s = case (Map.lookup (stackAddress s) m) of
+    (Just v) -> v
+    _        -> error notValue
 
 nextInputValue :: Input -> Value
-nextInputValue i
-    | value == (v :< _) = v
-    | otherwise = error "Not value"
+nextInputValue i = case (Seq.viewl i) of
+    (v Seq.:< b) -> v
+    _            -> error notValue
 
 pop2 :: Stack.Stack a -> Stack.Stack a
-pop2 == Stack.pop . Stack.pop
+pop2 = Stack.pop . Stack.pop
+
+notValue = "Not value"
+notAddress = "Not address"
