@@ -96,23 +96,23 @@ stackValue s = case (Stack.top s) of
 
 stackAddress :: ComputerStack -> (Either Address String)
 stackAddress s = case (Stack.top s) of
-    Left a -> (Left a)
-    _      -> (Right notAddress)
+    Left a -> Left a
+    _      -> Right notAddress
 
 valueAtAddress :: Address -> Memory -> (Either Value String)
 valueAtAddress a m =  case (Map.lookup a m) of
-    (Just v) -> (Left v)
-    _        -> (Right uninitializedMemory)
+    (Just v) -> Left v
+    _        -> Right uninitializedMemory
 
 nextInputValue :: Input -> (Either Value String)
 nextInputValue i = case (Seq.viewl i) of
-    (v Seq.:< _) -> (Left v)
-    _            -> (Right noInput)
+    (v Seq.:< _) -> Left v
+    _            -> Right noInput
 
 popInputValue :: Input -> (Either Input String)
 popInputValue i = case (Seq.viewl i) of
-    (_ Seq.:< xs) -> (Left xs)
-    _             -> (Right noInput)
+    (_ Seq.:< xs) -> Left xs
+    _             -> Right noInput
 
 pop2 :: Stack.Stack a -> (Either (Stack.Stack a) String)
 pop2 s = case (stackTop2 s) of
