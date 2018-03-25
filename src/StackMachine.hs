@@ -23,6 +23,24 @@ type ComputerStack = Stack.Stack (Either Address Value)
 -- | If there is a problem, error is raised ("Empty stack", "Not value", "Not address", "No input", "Unknown label", "Division by 0", "Uninitialized memory"), see tests
 -- TODO: implement running the program
 runProgram :: Program -> Input -> Output
+runProgram p i = reducer p Stack.empty i Map.empty Map.empty Seq.empty
+
+reducer :: Program -> ComputerStack -> Input -> Memory -> SubprogramDir -> Output -> Output
+reducer EOP _ _ _ _ out = out
+reducer (i `Then` p) s inp mem sub out = case i of
+    (TA a) -> reducer p (Stack.push (Left a) s) inp mem sub out
+    (TV v) -> reducer p (Stack.push (Right v) s) inp mem sub out
+    DR     -> reducer p (replaceAddressByValue s mem) inp mem sub out
+    ST     -> reducer p (pop2 s) inp (copyValueToMemory s mem) sub out
+    WR     -> reducer p s inp mem sub (out Seq.|> stackValue s)
+    RD     -> reducer p (Stack.push (Right $ nextInputValue inp) s) (popInputValue inp) mem sub out
+    AD     -> reducer p (add2 s) inp mem sub out
+    SB     -> reducer p (substract2 s) inp mem sub out
+    MT     -> reducer p (multip2 s) inp mem sub out
+    DI     -> reducer p (div2 s) inp mem sub out
+    
+reducer _ _ _ _ _ _  = error "Jumping not supported yet"
+
 copyValueToMemory :: ComputerStack -> Memory -> Memory
 copyValueToMemory s mem = Map.insert address value mem
     where address = stackAddress $ Stack.pop s
@@ -49,11 +67,35 @@ valueAtAddress a m s = case (Map.lookup (stackAddress s) m) of
 
 nextInputValue :: Input -> Value
 nextInputValue i = case (Seq.viewl i) of
-    (v Seq.:< b) -> v
+    (v Seq.:< _) -> v
     _            -> error notValue
+
+popInputValue :: Input -> Input
+popInputValue i = case (Seq.viewl i) of
+    (_ Seq.:< xs) -> xs
+    _             -> error notValue
 
 pop2 :: Stack.Stack a -> Stack.Stack a
 pop2 = Stack.pop . Stack.pop
 
+add2 :: ComputerStack -> ComputerStack
+add2 s = Stack.push (Right sum) $ pop2 s
+    where sum = (stackValue s) + (stackValue $ Stack.pop s)
+
+substract2 :: ComputerStack -> ComputerStack
+substract2 s = Stack.push (Right remainder) $ pop2 s
+    where remainder = (stackValue s) - (stackValue $ Stack.pop s)
+
+multip2 :: ComputerStack -> ComputerStack
+multip2 s = Stack.push (Right result) $ pop2 s
+    where result = (stackValue s) - (stackValue $ Stack.pop s)
+
+div2 :: ComputerStack -> ComputerStack
+div2 s = Stack.push (Right result) $ pop2 s
+    where result = case (stackValue $ Stack.pop s) of
+            0 -> error divisionByZero
+            x -> (stackValue s) `div` x
+
 notValue = "Not value"
 notAddress = "Not address"
+divisionByZero = "Division by 0"
