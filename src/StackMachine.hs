@@ -84,7 +84,7 @@ stackAddress s = case (Stack.top s) of
 valueAtAddress :: Address -> Memory -> (Either Value String)
 valueAtAddress a m =  case (Map.lookup a m) of
     (Just v) -> (Left v)
-    _        -> (Right notAddress)
+    _        -> (Right uninitializedMemory)
 
 nextInputValue :: Input -> (Either Value String)
 nextInputValue i = case (Seq.viewl i) of
@@ -140,3 +140,4 @@ notValue = "Not value"
 notAddress = "Not address"
 divisionByZero = "Division by 0"
 noInput = "No input"
+uninitializedMemory = "Uninitialized memory"
